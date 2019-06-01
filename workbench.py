@@ -1,26 +1,39 @@
 from itertools import chain
 
 from client import Client
-from extra_types import Points
+from extra_types import Points, no_points
 from model import Model
 from strategies import RandomStrategy, DropZeros, NoStrategy, DropBottomHalf
 from swarm import Swarm
 from random import seed
 
+"""
+For non-BitTorrent
+    two lines
+    x = iterations
+    y1 = #free riders
+    y2 = #non-freeriders
+    at each iteration, update proportions based on happiness of populations
+    
+    
+For BitTorrent strats
+    same as above, uses choking stuff
+"""
+
 seed(0)
 
 swarm = Swarm()
 
-strategy = NoStrategy
+strategy = DropZeros
 
-iterations = 100
-max_up = 100
-max_down = 100
-peer_size = 10
+iterations = 5
+max_up = 10
+max_down = 10
 
-num_good_clients = 50
-num_free_riders = 50
+num_good_clients = 80
+num_free_riders = 20
 num_clients = num_good_clients + num_free_riders
+peer_size = 4
 
 all_agents = chain(
     (Client(
@@ -28,16 +41,14 @@ all_agents = chain(
         up=Points(max_up),
         down=Points(max_down),
         peer_size=peer_size,
-        swarm=swarm,
-        is_free_rider=False
+        swarm=swarm
     ) for _ in range(num_good_clients)),
     (Client(
         strat=strategy,
-        up=Points(max_up // 4),
+        up=no_points,
         down=Points(max_down),
         peer_size=peer_size,
-        swarm=swarm,
-        is_free_rider=True
+        swarm=swarm
     ) for _ in range(num_free_riders))
 )
 

@@ -28,20 +28,22 @@ class Client:
                  up: Points,
                  down: Points,
                  peer_size: int,
-                 swarm: 'Swarm',
-                 is_free_rider: bool = False):
+                 swarm: 'Swarm'):
         self._strategy = strat(swarm, self)
         self._id = _counter.__next__()
         self._max_up = up
         self._max_down = down
         self._current_up = up
-        self._is_free_rider = is_free_rider
         self._peers: Dict[Client, Points] = {}
         self._peer_size = peer_size
 
     @property
     def peers(self) -> Sequence[Client]:
         return list(self._peers.keys())
+
+    @property
+    def _is_free_rider(self) -> bool:
+        return self._max_up < (self._max_down // 2)
 
     def init_peers(self) -> None:
         self._peers = {
@@ -57,18 +59,20 @@ class Client:
         return sum(self._peers.values())
 
     def reset(self) -> None:
+
         self._current_up = self._max_up
 
         self._peers = {
             x: no_points for x in self._strategy.generate_new_peers(self._peers, self)
         }
 
-    def ask_for_content(self) -> bool:
+    def ask_for_content(self, give_to: Client) -> bool:
         """ Returns whether or not content was granted """
-        if self._current_up > 0:
-            self._current_up -= 1
-            return True
-        return False
+        if self._strategy.willing_to_give_to(give_to):
+            if self._current_up > 0:
+                self._current_up -= 1
+                return True
+            return False
 
     def wants_content(self) -> bool:
         """ Returns whether or not client wants content"""

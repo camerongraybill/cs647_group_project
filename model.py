@@ -21,7 +21,7 @@ class Model:
                         peers = list(agent.peers)
                         shuffle(peers)
                         for peer in peers:
-                            if peer.ask_for_content():  # If they gave us content
+                            if peer.ask_for_content(agent):  # If they gave us content
                                 agent.give_content(peer)
                                 break
                         else:
