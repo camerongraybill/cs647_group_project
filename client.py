@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import count
-from typing import Dict, Sequence, TYPE_CHECKING, Callable, Any, Type
+from typing import Dict, Sequence, TYPE_CHECKING, Type
 
 from extra_types import Points, no_points
 from strategies import Strategy
@@ -17,8 +17,9 @@ _counter = count(0)
 class Result:
     max_amount: int
     amount_acquired: int
-    amount_given: int
+    amount_remaining: int
     willing_to_give: int
+    free_rider: bool
 
 
 class Client:
@@ -37,14 +38,15 @@ class Client:
         self._is_free_rider = is_free_rider
         self._peers: Dict[Client, Points] = {}
         self._peer_size = peer_size
-        self._swarm = swarm
 
     @property
     def peers(self) -> Sequence[Client]:
         return list(self._peers.keys())
 
     def init_peers(self) -> None:
-        self._peers = {x: no_points for x in self._swarm.get_random_grouping(self._peer_size, (self,))}
+        self._peers = {
+            x: no_points for x in self._strategy.init_peers(self._peer_size)
+        }
 
     @property
     def is_free_rider(self) -> bool:
@@ -79,9 +81,13 @@ class Client:
         return Result(
             max_amount=self._max_down,
             amount_acquired=self._current_down,
-            amount_given=self._current_up,
-            willing_to_give=self._max_up
+            amount_remaining=self._current_up,
+            willing_to_give=self._max_up,
+            free_rider=self._is_free_rider
         )
 
     def __hash__(self) -> int:
         return self._id.__hash__()
+
+    def __repr__(self):
+        return str(self.__hash__())
