@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from itertools import chain
-from statistics import mean
+import numpy as np
 from typing import TYPE_CHECKING, Iterator, Mapping, Dict, Collection, List, Optional
-
-from attr import dataclass
 
 if TYPE_CHECKING:
     from client import Client
@@ -136,7 +134,9 @@ class GainValueUnchoking(OptimisticUnchoking):
         return sum(1 for x in self._historic_contributions[j].contributions if x != 0)
 
     def _u(self, j: 'Client', current_iteration: int) -> float:
-        return mean(self._historic_contributions[j].contributions[self._historic_contributions[j].added: current_iteration] or [0])
+        if self._historic_contributions[j].added >= current_iteration:
+            return 0
+        return np.mean(self._historic_contributions[j].contributions[self._historic_contributions[j].added:current_iteration])
 
     def _Umax(self, current_iteration: int) -> float:
         return max(self._u(x, current_iteration) for x in self.neighbors)

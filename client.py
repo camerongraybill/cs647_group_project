@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import count
-from typing import Dict, Sequence, TYPE_CHECKING, Type
+from typing import Dict, Sequence, TYPE_CHECKING, Type, Any
 
 from extra_types import Points, no_points
 from strategies import Strategy
@@ -15,12 +15,21 @@ _counter = count(0)
 
 @dataclass(frozen=True)
 class Result:
-    max_amount: int
     amount_acquired: int
     amount_remaining: int
     willing_to_give: int
     free_rider: bool
+    id: int
 
+    def to_json(self, iteration: int) -> Any:
+        return {
+            'amount_acquired': self.amount_acquired,
+            'amount_remaining': self.amount_remaining,
+            'willing_to_give': self.willing_to_give,
+            'free_rider': self.free_rider,
+            'id': self.id,
+            'iteration': iteration
+        }
 
 class Client:
     def __init__(self,
@@ -98,11 +107,11 @@ class Client:
 
     def get_state(self) -> Result:
         return Result(
-            max_amount=self._max_down,
             amount_acquired=self._current_down,
             amount_remaining=self._current_up,
             willing_to_give=self._max_up,
-            free_rider=self._is_free_rider
+            free_rider=self._is_free_rider,
+            id=self._id
         )
 
     def __hash__(self) -> int:

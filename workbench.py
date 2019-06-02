@@ -6,7 +6,7 @@ from extra_types import Points, no_points
 from model import Model
 from strategies import DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking
 from swarm import Swarm
-
+from json import dumps
 """
 For non-BitTorrent
     two lines
@@ -20,13 +20,15 @@ For BitTorrent strats
     same as above, uses choking stuff
 """
 
+OUTPUT_FILE = "output.json"
+
 seed(0)
 
 swarm = Swarm()
 
-strategy = DemeritChoking
+strategy = NoStrategy
 
-iterations = 20
+iterations = 30
 max_up = 100
 max_down = 100
 
@@ -74,7 +76,24 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # plt.scatter(y=list(chain.from_iterable(fixed_data)), x=[[x]*num_good_clients for x in range(iterations)], alpha=.1)
-plt.plot([len(x) for x in good_guys], 'g')
-plt.plot([len(x) for x in bad_guys], 'r')
+#plt.plot([len(x) for x in good_guys], 'g')
+#plt.plot([len(x) for x in bad_guys], 'r')
 #plt.plot([len(x) for x in all_guys], 'b')
-plt.show()
+#plt.show()
+
+
+with open(OUTPUT_FILE, 'w') as f:
+    f.write(dumps(
+        {
+            'metadata': {
+                'strategy': strategy.__name__,
+                'iterations': iterations,
+                'max_up': max_up,
+                'max_down': max_down,
+                'starting_good_clients': num_good_clients,
+                'starting_bad_clients': num_free_riders,
+                'peer_size': peer_size
+            },
+            'data': tuple(chain.from_iterable((x.to_json(iteration) for x in y) for iteration, y in enumerate(data)))
+        }
+    ))

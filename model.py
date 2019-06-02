@@ -4,6 +4,8 @@ from typing import Tuple, List, Sequence
 from client import Result
 from swarm import Swarm
 
+from time import time
+
 
 class Model:
     @staticmethod
@@ -13,6 +15,7 @@ class Model:
 
         output: List[Tuple[Result, ...]] = []
         for c in range(iterations):
+            print(time(), c)
             remaining_agents = set(all_agents)
             while remaining_agents:
                 rem_agents_copy = list(remaining_agents)
