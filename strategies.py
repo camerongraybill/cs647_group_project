@@ -102,13 +102,11 @@ class OptimisticUnchoking(Strategy):
         return set(self._swarm.all_clients()) - {self._client}
 
     def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
-        #print(f'Me: {self._client}: {old_peers}')
-        #print(self._historic_contributions)
         for peer in list(old_peers.keys()):
             self._historic_contributions[peer].contributions[current_iteration] = old_peers[peer]
             hc = self._historic_contributions[peer]
 
-            if current_iteration < 3: # TODO: move to const
+            if current_iteration < 3:
                 yield from old_peers.keys()
                 break
 
