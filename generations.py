@@ -1,6 +1,7 @@
 import os
 from itertools import chain
 from json import dumps
+from multiprocessing import Pool
 from random import seed
 from typing import Tuple, Type, Iterable
 
@@ -9,7 +10,6 @@ from extra_types import Points, no_points
 from model import Model
 from strategies import DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking, Strategy
 from swarm import Swarm
-from multiprocessing import Pool
 
 """
 For non-BitTorrent
@@ -67,21 +67,26 @@ def run_task(t: Task):
                     'peer_size': peer_size
                 },
                 'data': tuple(
-                    chain.from_iterable((x.to_json(iteration) for x in y) for iteration, y in enumerate(Model.run(swarm, iterations))))
+                    chain.from_iterable(
+                        (x.to_json(iteration) for x in y) for iteration, y in enumerate(Model.run(swarm, iterations))))
             }
         ))
 
 
 seed(0)
 
+
 # Strategy, iterations, #good clients, #bad clients, peer_size, max_up, max_down
-tasks: Iterable[Task] = [
-    (DropZeros, 50, 80, 20, 4, Points(100), Points(100)),
-    (NoStrategy, 50, 80, 20, 4, Points(100), Points(100)),
-    (OptimisticUnchoking, 50, 80, 20, 4, Points(100), Points(100)),
-    (GainValueUnchoking, 50, 80, 20, 4, Points(100), Points(100)),
-    (DemeritChoking, 50, 80, 20, 4, Points(100), Points(100)),
-    (Strategy, 50, 80, 20, 4, Points(100), Points(100)),
-]
+def task_generator() -> Iterable[Task]:
+    for strat in (DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking):
+        for iter_count in (70,):
+            for num_good, num_bad in ((100, 0), (90, 10), (80, 20), (70, 30)):
+                for peer_size in (3,4):
+                    for max_up in (10, 100, 1000):
+                        for max_down in (10, 100, 1000):
+                            yield (strat, iter_count, num_good, num_bad, peer_size, Points(max_up), Points(max_down))
+
+
+tasks: Iterable[Task] = list(task_generator())
 with Pool() as p:
     p.map(run_task, tasks)
