@@ -28,8 +28,10 @@ class Client:
                  up: Points,
                  down: Points,
                  peer_size: int,
-                 swarm: 'Swarm'):
-        self._strategy = strat(swarm, self)
+                 swarm: 'Swarm',
+                 iterations: int
+                 ):
+        self._strategy = strat(swarm, self, iterations)
         self._id = _counter.__next__()
         self._max_up = up
         self._willing_to_give = up
@@ -65,7 +67,7 @@ class Client:
     def _current_down(self) -> Points:
         return sum(self._peers.values())
 
-    def reset(self) -> None:
+    def reset(self, current_iteration: int) -> None:
         # if happy for this round reset to max
         if self._current_down > int(.65 * float(self._max_down)):
             self._willing_to_give = self._max_up
@@ -76,7 +78,7 @@ class Client:
         self._current_up = self._willing_to_give
 
         self._peers = {
-            x: no_points for x in self._strategy.generate_new_peers(self._peers)
+            x: no_points for x in self._strategy.generate_new_peers(self._peers, current_iteration)
         }
 
     def ask_for_content(self, give_to: Client) -> bool:

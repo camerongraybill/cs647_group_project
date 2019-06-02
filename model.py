@@ -12,7 +12,7 @@ class Model:
         [x.init_peers() for x in all_agents]
 
         output: List[Tuple[Result, ...]] = []
-        for _ in range(iterations):
+        for c in range(iterations):
             remaining_agents = set(all_agents)
             while remaining_agents:
                 rem_agents_copy = list(remaining_agents)
@@ -34,7 +34,6 @@ class Model:
                         assert(seen_counter <= agent._peer_size)
                         # end assertions
 
-
                         for peer in peers:
                             if peer.ask_for_content(agent):  # If they gave us content
                                 agent.give_content(peer)
@@ -47,5 +46,5 @@ class Model:
                 tuple(x.get_state() for x in all_agents)
             )
 
-            [x.reset() for x in all_agents]
+            [x.reset(c) for x in all_agents]
         return output

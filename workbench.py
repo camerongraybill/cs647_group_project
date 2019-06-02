@@ -4,7 +4,7 @@ from random import seed
 from client import Client
 from extra_types import Points, no_points
 from model import Model
-from strategies import DropZeros, NoStrategy
+from strategies import DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking
 from swarm import Swarm
 
 """
@@ -24,7 +24,7 @@ seed(0)
 
 swarm = Swarm()
 
-strategy = DropZeros
+strategy = DemeritChoking
 
 iterations = 20
 max_up = 100
@@ -41,14 +41,16 @@ all_agents = chain(
         up=Points(max_up),
         down=Points(max_down),
         peer_size=peer_size,
-        swarm=swarm
+        swarm=swarm,
+        iterations=iterations
     ) for _ in range(num_good_clients)),
     (Client(
         strat=strategy,
         up=no_points,
         down=Points(max_down),
         peer_size=peer_size,
-        swarm=swarm
+        swarm=swarm,
+        iterations=iterations
     ) for _ in range(num_free_riders))
 )
 
@@ -75,5 +77,4 @@ import numpy as np
 plt.plot([len(x) for x in good_guys], 'g')
 plt.plot([len(x) for x in bad_guys], 'r')
 #plt.plot([len(x) for x in all_guys], 'b')
-print([min(x) for x in all_guys], 'y')
 plt.show()
