@@ -1,11 +1,11 @@
 from itertools import chain
+from random import seed
 
 from client import Client
 from extra_types import Points, no_points
 from model import Model
-from strategies import RandomStrategy, DropZeros, NoStrategy, DropBottomHalf
+from strategies import DropZeros, NoStrategy
 from swarm import Swarm
-from random import seed
 
 """
 For non-BitTorrent
@@ -26,9 +26,9 @@ swarm = Swarm()
 
 strategy = DropZeros
 
-iterations = 100
-max_up = 10
-max_down = 10
+iterations = 20
+max_up = 100
+max_down = 100
 
 num_good_clients = 80
 num_free_riders = 20
@@ -57,11 +57,11 @@ all_agents = chain(
 data = Model.run(swarm, iterations)
 
 good_guys = [
-    tuple(x.amount_acquired for x in y if not x.free_rider) for y in data
+    tuple(x.amount_acquired for x in y if not x.free_rider) if sum(int(not x.free_rider) for x in y) else (0,) for y in data
 ]
 
 bad_guys = [
-    tuple(x.amount_acquired for x in y if x.free_rider) for y in data
+    tuple(x.amount_acquired for x in y if x.free_rider) if sum(int(x.free_rider) for x in y) else (0,) for y in data
 ]
 
 all_guys = [
@@ -71,8 +71,9 @@ all_guys = [
 import matplotlib.pyplot as plt
 import numpy as np
 
-#plt.scatter(y=list(chain.from_iterable(fixed_data)), x=[[x]*num_good_clients for x in range(iterations)], alpha=.1)
-plt.plot(np.mean(good_guys, axis=1), 'g')
-plt.plot(np.mean(bad_guys, axis=1), 'r')
-plt.plot(np.mean(all_guys, axis=1), 'b')
+# plt.scatter(y=list(chain.from_iterable(fixed_data)), x=[[x]*num_good_clients for x in range(iterations)], alpha=.1)
+plt.plot([len(x) for x in good_guys], 'g')
+plt.plot([len(x) for x in bad_guys], 'r')
+#plt.plot([len(x) for x in all_guys], 'b')
+print([min(x) for x in all_guys], 'y')
 plt.show()

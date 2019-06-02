@@ -32,6 +32,7 @@ class Client:
         self._strategy = strat(swarm, self)
         self._id = _counter.__next__()
         self._max_up = up
+        self._willing_to_give = up
         self._max_down = down
         self._current_up = up
         self._peers: Dict[Client, Points] = {}
@@ -53,7 +54,7 @@ class Client:
 
     @property
     def _is_free_rider(self) -> bool:
-        return self._max_up < (self._max_down // 2)
+        return self._willing_to_give < (self._max_down // 2)
 
     def init_peers(self) -> None:
         self._peers = {
@@ -61,16 +62,18 @@ class Client:
         }
 
     @property
-    def is_free_rider(self) -> bool:
-        return self._is_free_rider
-
-    @property
     def _current_down(self) -> Points:
         return sum(self._peers.values())
 
     def reset(self) -> None:
+        # if happy for this round reset to max
+        if self._current_down > int(.65 * float(self._max_down)):
+            self._willing_to_give = self._max_up
+        else:
+            # otherwise scale to give less
+            self._willing_to_give = int((self._current_down / self._max_down) * self._willing_to_give)
 
-        self._current_up = self._max_up
+        self._current_up = self._willing_to_give
 
         self._peers = {
             x: no_points for x in self._strategy.generate_new_peers(self._peers)
@@ -82,7 +85,7 @@ class Client:
             if self._current_up > 0:
                 self._current_up -= 1
                 return True
-            return False
+        return False
 
     def wants_content(self) -> bool:
         """ Returns whether or not client wants content"""

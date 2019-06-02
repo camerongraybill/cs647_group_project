@@ -28,3 +28,6 @@ class Swarm:
         for peer in sample(possible_agents, n):
             peer.add_peer(requestor)
             yield peer
+
+    def get_one_random(self, ignore: Collection[Client], requestor: Client) -> Client:
+        return next(self.get_random_grouping(1, ignore, requestor))
