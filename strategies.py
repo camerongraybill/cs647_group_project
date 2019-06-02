@@ -14,38 +14,50 @@ class Strategy(ABC):
         self._client = client
 
     def init_peers(self, num_peers: int) -> Iterator['Client']:
-        yield from self._swarm.get_random_grouping(num_peers, (self._client,))
+        current_peers = self._client.peers
+        if num_peers <= len(current_peers):
+            new_peers = ()
+        else:
+            new_peers = self._swarm.get_random_grouping(num_peers - len(current_peers), current_peers, self._client)
+        yield from current_peers
+        yield from new_peers
 
     def willing_to_give_to(self, client: 'Client') -> bool:
         return True
 
     @abstractmethod
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_client: 'Client') -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int]) -> Iterator['Client']:
         raise NotImplementedError
 
 
 class NoStrategy(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_client: 'Client') -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int]) -> Iterator['Client']:
         yield from old_peers.keys()
 
 
 class RandomStrategy(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_client: 'Client') -> Iterator['Client']:
-        return self._swarm.get_random_grouping(len(old_peers), {current_client})
+    def generate_new_peers(self, old_peers: Mapping['Client', int]) -> Iterator['Client']:
+        return self._swarm.swap_bad_clients(self._client, old_peers, ())
+        #return self._swarm.get_random_grouping(len(old_peers), (), self._client)
 
 
 class DropZeros(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current: 'Client') -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int]) -> Iterator['Client']:
         keep = [k for k, v in old_peers.items() if v != 0]
-        new = self._swarm.get_random_grouping(len(old_peers) - len(keep), set((old_peers.keys()) - set(keep)) | {current})
+        bad = [p for p in old_peers.keys() if p not in keep]
+
+        new = self._swarm.swap_bad_clients(self._client, bad, keep)
+        #new = self._swarm.get_random_grouping(len(old_peers) - len(keep), set((old_peers.keys()) - set(keep)), self._client)
         return chain(keep, new)
 
 
 class DropBottomHalf(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_client: 'Client') -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int]) -> Iterator['Client']:
         sorted_keys = [k for k, v in sorted(old_peers.items(), key= lambda kv: kv[1], reverse=True)]
         top_half = sorted_keys[:len(sorted_keys) // 2]
-        bottom_half = self._swarm.get_random_grouping(len(sorted_keys) - (len(sorted_keys) // 2), set(old_peers.keys()) | {current_client})
+
+        bottom_half = self._swarm.swap_bad_clients(self._client, sorted_keys[len(sorted_keys) // 2:], top_half)
+        #bottom_half = self._swarm.get_random_grouping(len(sorted_keys) - (len(sorted_keys) // 2), old_peers.keys(), self._client)
         yield from chain(top_half, bottom_half)
 
 
@@ -59,7 +71,7 @@ class OptimisticUnchoking(Strategy):
         return self._is_choked[client]
 
 
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_client: 'Client') -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int]) -> Iterator['Client']:
         pass
 
 

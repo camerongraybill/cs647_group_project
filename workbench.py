@@ -26,7 +26,7 @@ swarm = Swarm()
 
 strategy = DropZeros
 
-iterations = 5
+iterations = 100
 max_up = 10
 max_down = 10
 
@@ -72,7 +72,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #plt.scatter(y=list(chain.from_iterable(fixed_data)), x=[[x]*num_good_clients for x in range(iterations)], alpha=.1)
-plt.plot(np.mean(good_guys, axis=1), 'r')
-plt.plot(np.mean(bad_guys, axis=1), 'b')
-plt.plot(np.mean(all_guys, axis=1), 'g')
+plt.plot(np.mean(good_guys, axis=1), 'g')
+plt.plot(np.mean(bad_guys, axis=1), 'r')
+plt.plot(np.mean(all_guys, axis=1), 'b')
 plt.show()

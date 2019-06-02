@@ -10,6 +10,7 @@ class Model:
     def run(swarm: Swarm, iterations: int) -> Sequence[Tuple[Result, ...]]:
         all_agents = list(swarm.all_clients())
         [x.init_peers() for x in all_agents]
+
         output: List[Tuple[Result, ...]] = []
         for _ in range(iterations):
             remaining_agents = set(all_agents)
@@ -20,6 +21,20 @@ class Model:
                     if agent.wants_content():
                         peers = list(agent.peers)
                         shuffle(peers)
+
+                        # assertions
+                        #print(f'Me {agent} peers: {peers}')
+
+                        for p in peers:
+                            assert (agent in p.peers)
+                        seen_counter = 0
+                        for a in all_agents:
+                            if agent in a.peers:
+                                seen_counter += 1
+                        assert(seen_counter <= agent._peer_size)
+                        # end assertions
+
+
                         for peer in peers:
                             if peer.ask_for_content(agent):  # If they gave us content
                                 agent.give_content(peer)

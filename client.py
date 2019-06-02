@@ -38,8 +38,18 @@ class Client:
         self._peer_size = peer_size
 
     @property
+    def is_saturated(self):
+        return len(self._peers) >= self._peer_size
+
+    @property
     def peers(self) -> Sequence[Client]:
         return list(self._peers.keys())
+
+    def add_peer(self, peer: Client) -> None:
+        self._peers[peer] = no_points
+
+    def remove_peer(self, peer: Client) -> None:
+        del self._peers[peer]
 
     @property
     def _is_free_rider(self) -> bool:
@@ -63,7 +73,7 @@ class Client:
         self._current_up = self._max_up
 
         self._peers = {
-            x: no_points for x in self._strategy.generate_new_peers(self._peers, self)
+            x: no_points for x in self._strategy.generate_new_peers(self._peers)
         }
 
     def ask_for_content(self, give_to: Client) -> bool:
