@@ -25,11 +25,13 @@ class Swarm:
 
     def get_random_grouping(self, n: int, ignore: Collection[Client], requestor: Client) -> Iterator[Client]:
         possible_agents = self._clients - (set(ignore) | {requestor}) - set(self.saturated_clients)
-        if possible_agents:
-            for peer in sample(possible_agents, n):
-                peer.add_peer(requestor)
-                yield peer
-        yield from ()
+        if len(possible_agents) <= n:
+            grouping = possible_agents
+        else:
+            grouping = sample(possible_agents, n)
+        for peer in grouping:
+            peer.add_peer(requestor)
+            yield peer
 
     def get_one_random(self, ignore: Collection[Client], requestor: Client) -> Optional[Client]:
         return next(self.get_random_grouping(1, ignore, requestor), None)

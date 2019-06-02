@@ -6,7 +6,7 @@ from extra_types import Points, no_points
 from model import Model
 from strategies import DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking
 from swarm import Swarm
-from json import dumps
+from json import dumps, loads
 """
 For non-BitTorrent
     two lines
@@ -60,26 +60,12 @@ all_agents = chain(
 
 data = Model.run(swarm, iterations)
 
-good_guys = [
-    tuple(x.amount_acquired for x in y if not x.free_rider) if sum(int(not x.free_rider) for x in y) else (0,) for y in data
-]
 
-bad_guys = [
-    tuple(x.amount_acquired for x in y if x.free_rider) if sum(int(x.free_rider) for x in y) else (0,) for y in data
-]
 
-all_guys = [
-    tuple(x.amount_acquired for x in y) for y in data
-]
 
-import matplotlib.pyplot as plt
-import numpy as np
 
 # plt.scatter(y=list(chain.from_iterable(fixed_data)), x=[[x]*num_good_clients for x in range(iterations)], alpha=.1)
-#plt.plot([len(x) for x in good_guys], 'g')
-#plt.plot([len(x) for x in bad_guys], 'r')
-#plt.plot([len(x) for x in all_guys], 'b')
-#plt.show()
+
 
 
 with open(OUTPUT_FILE, 'w') as f:
@@ -97,3 +83,5 @@ with open(OUTPUT_FILE, 'w') as f:
             'data': tuple(chain.from_iterable((x.to_json(iteration) for x in y) for iteration, y in enumerate(data)))
         }
     ))
+
+

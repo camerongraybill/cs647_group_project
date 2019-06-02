@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import count
-from typing import Dict, Sequence, TYPE_CHECKING, Type, Any
+from typing import Dict, Sequence, TYPE_CHECKING, Type, Any, List
 
 from extra_types import Points, no_points
 from strategies import Strategy
@@ -20,6 +20,7 @@ class Result:
     willing_to_give: int
     free_rider: bool
     id: int
+    peers: List[int]
 
     def to_json(self, iteration: int) -> Any:
         return {
@@ -28,7 +29,8 @@ class Result:
             'willing_to_give': self.willing_to_give,
             'free_rider': self.free_rider,
             'id': self.id,
-            'iteration': iteration
+            'iteration': iteration,
+            'peers': self.peers
         }
 
 class Client:
@@ -48,6 +50,10 @@ class Client:
         self._current_up = up
         self._peers: Dict[Client, Points] = {}
         self._peer_size = peer_size
+
+    @property
+    def id(self) -> int:
+        return self._id
 
     @property
     def is_saturated(self):
@@ -111,7 +117,8 @@ class Client:
             amount_remaining=self._current_up,
             willing_to_give=self._max_up,
             free_rider=self._is_free_rider,
-            id=self._id
+            id=self._id,
+            peers=[x.id for x in self._peers]
         )
 
     def __hash__(self) -> int:
