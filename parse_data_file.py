@@ -1,9 +1,9 @@
+from itertools import count
 from json import loads
 from sys import argv
 
 import matplotlib.pyplot as plt
 import numpy as np
-from itertools import count
 
 unique_val = count(0)
 
@@ -30,15 +30,17 @@ def make_population_graphs(path_to_file):
     good, bad = get_good_bad_partition(all_data)
 
     num_agents = all_data['metadata']['starting_good_clients'] + all_data['metadata']['starting_bad_clients']
-    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in range(all_data['metadata']['iterations'])]
+    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
+                  range(all_data['metadata']['iterations'])]
     num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
     f = plt.figure(next(unique_val))
 
     def add_plot(dataset, color, label, order):
-        plt.plot([sum(a['iteration'] == x for a in dataset) for x in range(num_iterations)], color, label=label, zorder=order)
+        plt.plot([sum(a['iteration'] == x for a in dataset) for x in range(num_iterations)], color, label=label,
+                 zorder=order)
 
     plt.title(f"{all_data['metadata']['strategy']}")
-    plt.ylim(0 - .1 * num_agents, 1.1*num_agents)
+    plt.ylim(0 - .1 * num_agents, 1.1 * num_agents)
     plt.ylabel("Population Size")
     plt.xlabel("Iterations")
     add_plot(good, 'g', "Normal Users", 1)
@@ -52,12 +54,14 @@ def make_happiness_graphs(path_to_file):
     good, bad = get_good_bad_partition(all_data)
 
     # Find the end
-    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in range(all_data['metadata']['iterations'])]
+    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
+                  range(all_data['metadata']['iterations'])]
     num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
     f = plt.figure(next(unique_val))
 
     def add_plot(dataset, color, label, order):
-        plt.plot([np.mean([a['amount_acquired'] for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)], color, label=label, zorder=order)
+        plt.plot([np.mean([a['amount_acquired'] for a in dataset if a['iteration'] == x] or [0]) for x in
+                  range(num_iterations)], color, label=label, zorder=order)
 
     plt.title(f"{all_data['metadata']['strategy']}")
     plt.ylabel("Mean Files Acquired")
@@ -78,15 +82,18 @@ def make_utility_graphs(path_to_file):
     good, bad = get_good_bad_partition(all_data)
 
     # Find the end
-    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in range(all_data['metadata']['iterations'])]
+    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
+                  range(all_data['metadata']['iterations'])]
     num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
     f = plt.figure(next(unique_val))
 
     def utility(entry):
-        return (entry['amount_acquired'] / all_data['metadata']['max_down']) - ((.25*entry['willing_to_give']/all_data['metadata']['max_up']) if not entry['free_rider'] else 0)
+        return (entry['amount_acquired'] / all_data['metadata']['max_down']) - (
+            (.25 * entry['willing_to_give'] / all_data['metadata']['max_up']) if not entry['free_rider'] else 0)
 
     def add_plot(dataset, color, label, order):
-        plt.plot([np.mean([utility(a) for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)], color, label=label, zorder=order)
+        plt.plot([np.mean([utility(a) for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)],
+                 color, label=label, zorder=order)
 
     plt.title(f"{all_data['metadata']['strategy']}")
     plt.ylabel("Mean Utility")
@@ -102,6 +109,7 @@ def make_utility_graphs(path_to_file):
     plt.legend()
 
     f.show()
+
 
 def make_all_graphs(path_to_file):
     make_population_graphs(path_to_file)
