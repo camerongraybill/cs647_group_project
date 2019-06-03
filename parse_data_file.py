@@ -34,15 +34,15 @@ def make_population_graphs(path_to_file):
     num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
     f = plt.figure(next(unique_val))
 
-    def add_plot(dataset, color, label):
-        plt.plot([sum(a['iteration'] == x for a in dataset) for x in range(num_iterations)], color, label=label)
+    def add_plot(dataset, color, label, order):
+        plt.plot([sum(a['iteration'] == x for a in dataset) for x in range(num_iterations)], color, label=label, zorder=order)
 
     plt.title(f"{all_data['metadata']['strategy']}")
     plt.ylim(0 - .1 * num_agents, 1.1*num_agents)
     plt.ylabel("Population Size")
     plt.xlabel("Iterations")
-    add_plot(good, 'g', "Normal Users")
-    add_plot(bad, 'r', "Free Rider")
+    add_plot(good, 'g', "Normal Users", 1)
+    add_plot(bad, 'r', "Free Rider", 2)
     plt.legend()
     f.show()
 
@@ -56,14 +56,15 @@ def make_happiness_graphs(path_to_file):
     num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
     f = plt.figure(next(unique_val))
 
-    def add_plot(dataset, color, label):
-        plt.plot([np.mean([a['amount_acquired'] for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)], color, label=label)
+    def add_plot(dataset, color, label, order):
+        plt.plot([np.mean([a['amount_acquired'] for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)], color, label=label, zorder=order)
 
     plt.title(f"{all_data['metadata']['strategy']}")
     plt.ylabel("Mean Files Acquired")
     plt.xlabel("Iterations")
-    add_plot(good, 'g', "Normal Users")
-    add_plot(bad, 'r', "Free Rider")
+    add_plot(good, 'g', "Normal Users", 1)
+    add_plot(bad, 'r', "Free Rider", 2)
+    add_plot(all_data['data'], 'b', "All Users", 0)
 
     plt.ylim(0, all_data['metadata']['max_down'])
 
@@ -84,14 +85,15 @@ def make_utility_graphs(path_to_file):
     def utility(entry):
         return (entry['amount_acquired'] / all_data['metadata']['max_down']) - ((.25*entry['willing_to_give']/all_data['metadata']['max_up']) if not entry['free_rider'] else 0)
 
-    def add_plot(dataset, color, label):
-        plt.plot([np.mean([utility(a) for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)], color, label=label)
+    def add_plot(dataset, color, label, order):
+        plt.plot([np.mean([utility(a) for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)], color, label=label, zorder=order)
 
     plt.title(f"{all_data['metadata']['strategy']}")
     plt.ylabel("Mean Utility")
     plt.xlabel("Iterations")
-    add_plot(good, 'g', "Normal Users")
-    add_plot(bad, 'r', "Free Rider")
+    add_plot(good, 'g', "Normal Users", 1)
+    add_plot(bad, 'r', "Free Rider", 2)
+    add_plot(all_data['data'], 'b', "All Users", 0)
 
     ylim = plt.ylim()
 
