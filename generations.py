@@ -92,5 +92,15 @@ for strategy in all_strategies:
         os.makedirs(f"./results/{strategy.__name__}")
 
 tasks: Iterable[Task] = list(task_generator())
-with Pool() as p:
-    p.map(run_task, tasks)
+#with Pool() as p:
+map(run_task, tasks)
+
+tasks: Iterable[Task] = [
+    (DropZeros, 50, 80, 20, 4, Points(100), Points(100)),
+    (NoStrategy, 50, 80, 20, 4, Points(100), Points(100)),
+    (OptimisticUnchoking, 50, 80, 20, 4, Points(100), Points(100)),
+    (GainValueUnchoking, 50, 80, 20, 4, Points(100), Points(100)),
+    (DemeritChoking, 50, 80, 20, 4, Points(100), Points(100)),
+]
+
+list(map(run_task, tasks))
