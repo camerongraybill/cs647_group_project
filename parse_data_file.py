@@ -14,6 +14,15 @@ def get_data(path_to_file):
         return all_data
 
 
+def get_end(all_data):
+    try:
+        all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
+                      range(all_data['metadata']['iterations'])]
+        return all_points.index(0) + 1
+    except ValueError:
+        return all_data['metadata']['iterations']
+
+
 def get_good_bad_partition(all_data):
     good_guys = [
         y for y in all_data['data'] if not y['free_rider']
@@ -30,9 +39,7 @@ def make_population_graphs(path_to_file):
     good, bad = get_good_bad_partition(all_data)
 
     num_agents = all_data['metadata']['starting_good_clients'] + all_data['metadata']['starting_bad_clients']
-    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
-                  range(all_data['metadata']['iterations'])]
-    num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
+    num_iterations = get_end(all_data)
     f = plt.figure(next(unique_val))
 
     def add_plot(dataset, color, label, order):
@@ -54,9 +61,7 @@ def make_happiness_graphs(path_to_file):
     good, bad = get_good_bad_partition(all_data)
 
     # Find the end
-    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
-                  range(all_data['metadata']['iterations'])]
-    num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
+    num_iterations = get_end(all_data)
     f = plt.figure(next(unique_val))
 
     def add_plot(dataset, color, label, order):
@@ -82,9 +87,7 @@ def make_utility_graphs(path_to_file):
     good, bad = get_good_bad_partition(all_data)
 
     # Find the end
-    all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
-                  range(all_data['metadata']['iterations'])]
-    num_iterations = all_points.index(0) + 1 if all_points.index(0) is not None else all_data['metadata']['iterations']
+    num_iterations = get_end(all_data)
     f = plt.figure(next(unique_val))
 
     def utility(entry):

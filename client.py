@@ -33,6 +33,7 @@ class Result:
             'peers': self.peers
         }
 
+
 class Client:
     def __init__(self,
                  strat: Type[Strategy],
