@@ -75,10 +75,11 @@ def run_task(t: Task):
 
 seed(0)
 
+all_strategies = (DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking)
 
 # Strategy, iterations, #good clients, #bad clients, peer_size, max_up, max_down
 def task_generator() -> Iterable[Task]:
-    for strat in (DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking, DemeritChoking):
+    for strat in all_strategies:
         for iter_count in (70,):
             for num_good, num_bad in ((100, 0), (90, 10), (80, 20), (70, 30)):
                 for peer_size in (3,4):
@@ -86,6 +87,9 @@ def task_generator() -> Iterable[Task]:
                         for max_down in (10, 100, 1000):
                             yield (strat, iter_count, num_good, num_bad, peer_size, Points(max_up), Points(max_down))
 
+for strategy in all_strategies:
+    if not os.path.isdir(f"./results/{strategy.__name__}"):
+        os.makedirs(f"./results/{strategy.__name__}")
 
 tasks: Iterable[Task] = list(task_generator())
 with Pool() as p:

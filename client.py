@@ -115,7 +115,7 @@ class Client:
         return Result(
             amount_acquired=self._current_down,
             amount_remaining=self._current_up,
-            willing_to_give=self._max_up,
+            willing_to_give=self._willing_to_give,
             free_rider=self._is_free_rider,
             id=self._id,
             peers=[x.id for x in self._peers]
