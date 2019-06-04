@@ -24,8 +24,8 @@ class Strategy(ABC):
             new_peers = list(
                 self._swarm.get_random_grouping(num_peers - len(current_peers), current_peers, self._client))
         for peer in new_peers:
-            peer.add_peer(self._client)
             self._client.add_peer(peer)
+            peer.add_peer(self._client)
             yield peer
         yield from current_peers
 
@@ -35,65 +35,75 @@ class Strategy(ABC):
     def willing_to_give_to(self, client: 'Client') -> bool:
         return True
 
-    def pre_generate(self, old_peers: Dict['Client', int], current_iteration: int):
+    def pre_generate(self, old_peers: Dict['Client', int], current_iteration: int) -> Set['Client']:
         to_remove = []
         for peer in old_peers.keys():
+            if self._client not in peer.peers:
+                to_remove.append(peer)
+        for peer in self._client.peers:
             if self._client not in peer.peers:
                 self._client.remove_peer(peer)
         for removed in to_remove:
             del old_peers[removed]
+        clients_connecting_to_us = {x for x in self._swarm.all_clients() if self._client in x.peers}
+        # return the new clients
+        return clients_connecting_to_us - set(old_peers.keys())
 
     @abstractmethod
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client']) -> Iterator['Client']:
         raise NotImplementedError
 
 
 class NoStrategy(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client']) -> Iterator['Client']:
         yield from old_peers.keys()
+        yield from new_peers
 
 
 class RandomStrategy(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client']) -> Iterator['Client']:
         for peer in old_peers.keys():
             self._client.remove_peer(peer)
         for peer in self._swarm.swap_bad_clients(self._client, old_peers, ()):
-            peer.add_peer(self._client)
             self._client.add_peer(peer)
+            peer.add_peer(self._client)
             yield peer
+        yield from new_peers
 
 
 class DropZeros(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client']) -> Iterator['Client']:
         keep = [k for k, v in old_peers.items() if v != 0]
         bad = [p for p in old_peers.keys() if p not in keep]
 
         for peer in bad:
-            peer.remove_peer(self._client)
             self._client.remove_peer(peer)
+            peer.remove_peer(self._client)
 
         new = list(self._swarm.swap_bad_clients(self._client, bad, keep))
         for peer in new:
-            peer.add_peer(self._client)
             self._client.add_peer(peer)
-        return chain(keep, new)
+            peer.add_peer(self._client)
+        yield from keep
+        yield from new
+        yield from new_peers
 
 
 class DropBottomHalf(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client']) -> Iterator['Client']:
         sorted_keys = [k for k, v in sorted(old_peers.items(), key=lambda kv: kv[1], reverse=True)]
         top_half = sorted_keys[:len(sorted_keys) // 2]
         bottom_half = sorted_keys[len(sorted_keys) // 2:]
 
         for peer in bottom_half:
-            peer.remove_peer(self._client)
             self._client.remove_peer(peer)
+            peer.remove_peer(self._client)
 
         new_bottom = list(self._swarm.swap_bad_clients(self._client, bottom_half, top_half))
 
         for peer in new_bottom:
-            peer.add_peer(self._client)
             self._client.add_peer(peer)
+            peer.add_peer(self._client)
 
         yield from chain(top_half, new_bottom)
 
@@ -126,6 +136,8 @@ class OptimisticUnchoking(Strategy):
 
     def choke(self, peer: 'Client'):
         self._is_choked[peer] = True
+        self._client.remove_peer(peer)
+        peer.remove_peer(self._client)
 
     def unchoke(self, peer: 'Client', current_iteration: int, add: bool = True) -> None:
         self._is_choked[peer] = False
@@ -133,8 +145,8 @@ class OptimisticUnchoking(Strategy):
         if peer not in self._historic_contributions:
             self._historic_contributions[peer] = HistEntry(self._max_iterations, current_iteration)
         if add:
-            peer.add_peer(self._client)
             self._client.add_peer(peer)
+            peer.add_peer(self._client)
 
     def init_peers(self, num_peers: int) -> Iterator['Client']:
         new_peers = list(super().init_peers(num_peers))
@@ -146,30 +158,30 @@ class OptimisticUnchoking(Strategy):
     def neighbors(self):
         return set(self._swarm.all_clients()) - {self._client}
 
-    def pre_generate(self, old_peers: Dict['Client', int], current_iteration: int):
+    def pre_generate(self, old_peers: Dict['Client', int], current_iteration: int) -> Set['Client']:
         # Save contributions from this round
         for peer in list(old_peers.keys()):
             self._historic_contributions[peer].contributions[current_iteration] = old_peers[peer]
-        super().pre_generate(old_peers, current_iteration)
+        return super().pre_generate(old_peers, current_iteration)
 
     @property
     def choked(self) -> Set['Client']:
         return {x for x, y in self._is_choked.items() if y}
 
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration) -> Iterator['Client']:
+    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client']) -> Iterator['Client']:
         # choke the guys that suck, but only the first one
         for peer in old_peers.keys():
             hc = self._historic_contributions[peer]
 
             if hc.added <= (current_iteration - self.timeout):
                 # If we did not get any contributions in the last {timeout} rounds
-                recent_contributions = hc.contributions[current_iteration - self.timeout:current_iteration]
+                recent_contributions = hc.contributions[current_iteration - self.timeout + 1:current_iteration + 1]
                 if all(x == 0 for x in recent_contributions):
                     self.choke(peer)
                     break
 
         # If we want more people, try to find more people
-        current_peers = set(old_peers.keys() - self.choked)
+        current_peers = set(old_peers.keys() - self.choked) | new_peers
         if len(current_peers) < self._client.peer_size:
             new = self.choose_next_person(old_peers.keys(), current_iteration)
             if new is not None:

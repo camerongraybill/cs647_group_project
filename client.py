@@ -70,12 +70,12 @@ class Client:
         return list(self._peers.keys())
 
     def add_peer(self, peer: Client) -> None:
-        #assert peer not in self.peers
-        print(f"connecting {self} <-> {peer}")
+        assert peer not in self.peers
+        print(f"connecting {self} --> {peer}")
         self._peers[peer] = no_points
 
     def remove_peer(self, peer: Client) -> None:
-        print(f"removing {self} <-> {peer}")
+        print(f"removing {self} --> {peer}")
         del self._peers[peer]
 
     @property
@@ -103,8 +103,8 @@ class Client:
         self._current_up = self._willing_to_give
 
     def reset(self, current_iteration: int) -> None:
-        self._strategy.pre_generate(self._persisted, current_iteration)
-        new_peers = self._strategy.generate_new_peers(self._persisted, current_iteration)
+        new_neighbors = self._strategy.pre_generate(self._persisted, current_iteration)
+        new_peers = self._strategy.generate_new_peers(self._persisted, current_iteration, new_neighbors)
         self._peers = empty_peers_dict(new_peers)
 
     def after_reset(self, current_iteration: int):
