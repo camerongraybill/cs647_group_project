@@ -36,7 +36,6 @@ class Strategy(ABC):
         return True
 
     def pre_generate(self, old_peers: Dict['Client', int], current_iteration: int):
-        return
         to_remove = []
         for peer in old_peers.keys():
             if self._client not in peer.peers:
