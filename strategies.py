@@ -59,8 +59,10 @@ class Strategy(ABC):
 class NoStrategy(Strategy):
     def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client'],
                            removed_in_iteration: Set['Client']) -> Iterator['Client']:
-        yield from old_peers.keys()
-        yield from new_peers
+        def fun():
+            yield from old_peers.keys()
+            yield from new_peers
+        yield from (a for a in fun() if a not in removed_in_iteration)
 
 
 class RandomStrategy(Strategy):
@@ -78,40 +80,20 @@ class RandomStrategy(Strategy):
 class DropZeros(Strategy):
     def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client'],
                            removed_in_iteration: Set['Client']) -> Iterator['Client']:
-        keep = [k for k, v in old_peers.items() if v != 0]
-        bad = [p for p in old_peers.keys() if p not in keep]
+
+        keep = [k for k, v in old_peers.items() if v != 0 and k not in removed_in_iteration] + list(new_peers)
+        bad = [p for p, v in old_peers.items() if v == 0 and p not in removed_in_iteration]
 
         for peer in bad:
             self._client.remove_peer(peer)
             peer.remove_peer(self._client)
 
-        new = list(self._swarm.swap_bad_clients(self._client, bad, keep))
+        new = list(self._swarm.swap_bad_clients(self._client, bad, keep + list(removed_in_iteration)))
         for peer in new:
             self._client.add_peer(peer)
             peer.add_peer(self._client)
         yield from keep
         yield from new
-        yield from new_peers
-
-
-class DropBottomHalf(Strategy):
-    def generate_new_peers(self, old_peers: Mapping['Client', int], current_iteration, new_peers: Set['Client'],
-                           removed_in_iteration: Set['Client']) -> Iterator['Client']:
-        sorted_keys = [k for k, v in sorted(old_peers.items(), key=lambda kv: kv[1], reverse=True)]
-        top_half = sorted_keys[:len(sorted_keys) // 2]
-        bottom_half = sorted_keys[len(sorted_keys) // 2:]
-
-        for peer in bottom_half:
-            self._client.remove_peer(peer)
-            peer.remove_peer(self._client)
-
-        new_bottom = list(self._swarm.swap_bad_clients(self._client, bottom_half, top_half))
-
-        for peer in new_bottom:
-            self._client.add_peer(peer)
-            peer.add_peer(self._client)
-
-        yield from chain(top_half, new_bottom)
 
 
 class HistEntry:
@@ -144,14 +126,14 @@ class OptimisticUnchoking(Strategy):
         return self._swarm.get_one_random(set(chain(current_peers, blacklist)), self._client)
 
     def choke(self, peer: 'Client', remove=True):
-        print(f"{self} choking {peer}")
+        print(f"{self._client} choking {peer}")
         self._is_choked[peer] = True
         if remove:
             self._client.remove_peer(peer)
             peer.remove_peer(self._client)
 
     def unchoke(self, peer: 'Client', current_iteration: int, add: bool = True) -> None:
-        print(f"{self} un_choking {peer}")
+        print(f"{self._client} un_choking {peer}")
         self._is_choked[peer] = False
         self._times_unchoked[peer] += 1
         if peer not in self._historic_contributions:
@@ -197,6 +179,7 @@ class OptimisticUnchoking(Strategy):
                     newly_choked = {peer}
                     break
 
+
         # If we want more people, try to find more people
         current_peers = set((old_peers.keys() | new_peers) - removed_in_iteration) - self.choked
         if len(current_peers) < self._client.peer_size:
@@ -218,7 +201,9 @@ class GainValueUnchoking(OptimisticUnchoking):
         return self._times_unchoked[j]
 
     def _n(self, j: 'Client') -> int:
-        return sum(1 for x in self._historic_contributions[j].contributions if x != 0)
+        if j in self._historic_contributions:
+            return sum(1 for x in self._historic_contributions[j].contributions if x != 0)
+        return 0
 
     def _u(self, j: 'Client', current_iteration: int) -> float:
         if j not in self._historic_contributions:
@@ -239,15 +224,42 @@ class GainValueUnchoking(OptimisticUnchoking):
 
     def choose_next_person(self, current_peers: Collection['Client'], blacklist: Collection['Client'],
                            current_iteration) -> 'Client':
-        return next((a for a in (k for k, v in
-                                 sorted({x: self._G(x, current_iteration) for x in self.neighbors}.items(),
-                                        key=lambda kv: kv[1], reverse=True)) if not a.is_saturated), None)
+
+        def gen():
+            g_values = {x: self._G(x, current_iteration) for x in self.neighbors}
+            sorted_g_values = sorted(g_values.items(), key=lambda kv: kv[1])
+            for k, _ in sorted_g_values:
+                if k.is_saturated:
+                    continue
+                if k in current_peers:
+                    continue
+                if k in blacklist:
+                    continue
+                yield k
+
+        return next(gen(), None)
 
 
 class DemeritChoking(OptimisticUnchoking):
     # timeout = 6 iterations
     def choose_next_person(self, current_peers: Collection['Client'], blacklist: Collection['Client'],
                            current_iteration) -> Optional['Client']:
-        return next((k for k, v in self._historic_contributions.items() if current_iteration >= 6 and sum(
-            1 for x in v.contributions[current_iteration - 6: current_iteration] if x != 0) < 4 and not k.is_saturated),
-                    None)
+        if current_iteration < 6:
+            return None
+
+        def gen():
+            for peer, hc in self._historic_contributions.items():
+                num_times_given = sum(1 for x in hc.contributions[current_iteration - 6: current_iteration] if x != 0)
+                if num_times_given < 4:
+                    continue
+                if peer.is_saturated:
+                    continue
+                if peer in current_peers:
+                    continue
+                if peer in blacklist:
+                    continue
+                yield peer
+
+
+        return next(gen(), None)
+

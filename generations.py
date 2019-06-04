@@ -87,7 +87,7 @@ all_strategies = (DropZeros, NoStrategy, OptimisticUnchoking, GainValueUnchoking
 #                         for max_down in (10, 100, 1000):
 #                             yield (strat, iter_count, num_good, num_bad, peer_size, Points(max_up), Points(max_down))
 def task_generator() -> Iterable[Task]:
-    yield (OptimisticUnchoking, 20, 8, 2, 4, 100, 100)
+    yield (DropZeros, 20, 8, 2, 4, 100, 100)
 
 for strategy in all_strategies:
     if not os.path.isdir(f"./results/{strategy.__name__}"):
