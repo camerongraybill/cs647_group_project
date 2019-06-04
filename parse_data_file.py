@@ -59,7 +59,7 @@ def get_data(path_to_file):
 
 def get_end(all_data):
     try:
-        all_points = [np.mean([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
+        all_points = [sum([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
                       range(all_data['metadata']['iterations'])]
         return all_points.index(0) + 1
     except ValueError:
