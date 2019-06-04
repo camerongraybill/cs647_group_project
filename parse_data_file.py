@@ -175,10 +175,11 @@ if __name__ == '__main__':
                 'happy': make_happiness_graphs,
                 'util': make_utility_graphs,
                 'all': make_all_graphs,
+                'allv': lambda x: make_all_graphs(x, True),
                 'vid': make_peer_graph
             }[cmd](path)
             plt.show()
         except KeyError:
-            print("valid commands are 'pop', 'happy', 'util', 'vid', and 'all'")
+            print("valid commands are 'pop', 'happy', 'util', 'vid', 'allv', and 'all'")
     except:
-        print(f"usage: {argv[0]} pop|happy|util|all|vid path/to/json/file")
+        print(f"usage: {argv[0]} pop|happy|util|all|vid|allv path/to/json/file")
