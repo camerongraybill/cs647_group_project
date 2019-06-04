@@ -19,8 +19,6 @@ class Swarm:
         return [x for x in self._clients if x.is_saturated]
 
     def swap_bad_clients(self, me: Client, clients: Collection[Client], ignore: Collection[Client]):
-        for c in clients:
-            c.remove_peer(me)
         yield from self.get_random_grouping(len(clients), ignore, me)
 
     def get_random_grouping(self, n: int, ignore: Collection[Client], requestor: Client) -> Iterator[Client]:
@@ -30,7 +28,6 @@ class Swarm:
         else:
             grouping = sample(possible_agents, n)
         for peer in grouping:
-            peer.add_peer(requestor)
             yield peer
 
     def get_one_random(self, ignore: Collection[Client], requestor: Client) -> Optional[Client]:

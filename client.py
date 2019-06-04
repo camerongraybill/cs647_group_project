@@ -12,6 +12,10 @@ if TYPE_CHECKING:
 
 _counter = count(0)
 
+def empty_peers_dict(peers):
+    return {
+        x: no_points for x in peers
+    }
 
 @dataclass(frozen=True)
 class Result:
@@ -50,7 +54,8 @@ class Client:
         self._max_down = down
         self._current_up = up
         self._peers: Dict[Client, Points] = {}
-        self._peer_size = peer_size
+        self.peer_size = peer_size
+        self._persisted = None
 
     @property
     def id(self) -> int:
@@ -58,16 +63,19 @@ class Client:
 
     @property
     def is_saturated(self):
-        return len(self._peers) >= self._peer_size
+        return len(self.peers) >= self.peer_size
 
     @property
     def peers(self) -> Sequence[Client]:
         return list(self._peers.keys())
 
     def add_peer(self, peer: Client) -> None:
+        #assert peer not in self.peers
+        print(f"connecting {self} <-> {peer}")
         self._peers[peer] = no_points
 
     def remove_peer(self, peer: Client) -> None:
+        print(f"removing {self} <-> {peer}")
         del self._peers[peer]
 
     @property
@@ -75,15 +83,16 @@ class Client:
         return self._willing_to_give < (self._max_down // 2)
 
     def init_peers(self) -> None:
-        self._peers = {
-            x: no_points for x in self._strategy.init_peers(self._peer_size)
-        }
+        self._peers = empty_peers_dict(self._strategy.init_peers(self.peer_size))
 
     @property
     def _current_down(self) -> Points:
         return sum(self._peers.values())
 
-    def reset(self, current_iteration: int) -> None:
+    def before_reset(self):
+        self._persisted = dict(self._peers.items())
+
+    def reset_values(self):
         # if happy for this round reset to max
         if self._current_down > int(.65 * float(self._max_down)):
             self._willing_to_give = self._max_up
@@ -93,9 +102,18 @@ class Client:
 
         self._current_up = self._willing_to_give
 
-        self._peers = {
-            x: no_points for x in self._strategy.generate_new_peers(self._peers, current_iteration)
-        }
+    def reset(self, current_iteration: int) -> None:
+        self._strategy.pre_generate(self._persisted, current_iteration)
+        new_peers = self._strategy.generate_new_peers(self._persisted, current_iteration)
+        self._peers = empty_peers_dict(new_peers)
+
+    def after_reset(self, current_iteration: int):
+        # clean up dangling connections
+        for peer in self.peers:
+            if self not in peer.peers:
+                self.remove_peer(peer)
+        self._strategy.after_reset(current_iteration)
+
 
     def ask_for_content(self, give_to: Client) -> bool:
         """ Returns whether or not content was granted """
@@ -119,7 +137,7 @@ class Client:
             willing_to_give=self._willing_to_give,
             free_rider=self._is_free_rider,
             id=self._id,
-            peers=[x.id for x in self._peers]
+            peers=[x.id for x in self.peers]
         )
 
     def __hash__(self) -> int:

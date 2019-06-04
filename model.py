@@ -1,53 +1,58 @@
 from random import shuffle
-from typing import Tuple, List, Sequence
+from time import time
+from typing import Tuple, List, Sequence, TypeVar, Iterable, Iterator
 
 from client import Result
 from swarm import Swarm
 
-from time import time
+T = TypeVar('T')
+
+
+def random_iteration(iterable: Iterable[T]) -> Iterator[T]:
+    l = list(iterable)
+    shuffle(l)
+    yield from l
+
+
+def do_assertions(all_agents):
+    for client in all_agents:
+        for p in client.peers:
+            assert (client in p.peers)
+        assert (sum(1 for x in all_agents if client in x.peers) <= client.peer_size)
 
 
 class Model:
+
     @staticmethod
-    def run(swarm: Swarm, iterations: int) -> Sequence[Tuple[Result, ...]]:
+    def run(swarm: Swarm, iterations: int) -> Iterator[Iterator[Result]]:
         all_agents = list(swarm.all_clients())
         [x.init_peers() for x in all_agents]
 
-        output: List[Tuple[Result, ...]] = []
         for c in range(iterations):
-            print(time(), c)
+            print("Iteration", c)
+
+            do_assertions(all_agents)
+
             remaining_agents = set(all_agents)
             while remaining_agents:
-                rem_agents_copy = list(remaining_agents)
-                shuffle(rem_agents_copy)
-                for agent in rem_agents_copy:
-                    if agent.wants_content():
-                        peers = list(agent.peers)
-                        shuffle(peers)
-
-                        # assertions
-                        #print(f'Me {agent} peers: {peers}')
-
-                        for p in peers:
-                            assert (agent in p.peers)
-                        seen_counter = 0
-                        for a in all_agents:
-                            if agent in a.peers:
-                                seen_counter += 1
-                        assert(seen_counter <= agent._peer_size)
-                        # end assertions
-
-                        for peer in peers:
-                            if peer.ask_for_content(agent):  # If they gave us content
-                                agent.give_content(peer)
-                                break
-                        else:
-                            remaining_agents.remove(agent)
+                # filter out the ones that don't want content
+                remaining_agents -= {x for x in all_agents if not x.wants_content()}
+                # Iterate in random order
+                for agent in random_iteration(remaining_agents):
+                    # Iterate all peers of that agent in random order
+                    for peer in random_iteration(agent.peers):
+                        if peer.ask_for_content(agent):  # If they gave us content
+                            agent.give_content(peer)
+                            break
                     else:
+                        # None of the peers gave them something
                         remaining_agents.remove(agent)
-            output.append(
-                tuple(x.get_state() for x in all_agents)
-            )
+            yield (x.get_state() for x in all_agents)
 
+            [x.reset_values() for x in all_agents]
+
+            # Find new peers
+
+            [x.before_reset() for x in all_agents]
             [x.reset(c) for x in all_agents]
-        return output
+            [x.after_reset(c) for x in all_agents]

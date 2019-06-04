@@ -14,7 +14,7 @@ def make_peer_graph(path_to_input):
     vid = cv2.VideoWriter(f'./test.avi', 0, 2, (640, 480))
     data = get_data(path_to_input)
     G = nx.Graph()
-    target_clients = sorted(list(set(x['id'] for x in data['data'])))[:5]
+    target_clients = sorted(list(set(x['id'] for x in data['data'])))
     all_peers = set(chain.from_iterable(x['peers'] for x in data['data'] if x['id'] in target_clients))
     all_clients = all_peers | set(target_clients)
     G.add_nodes_from(all_clients)
@@ -34,9 +34,10 @@ def make_peer_graph(path_to_input):
 
         G.add_edges_from(edges())
         nx.draw_networkx_nodes(G, pos, nodelist=[x['id'] for x in good_entries], node_color='g', node_size=100,
-                               alpha=0.8)
+                               alpha=0.8, with_labels=True)
         nx.draw_networkx_nodes(G, pos, nodelist=[x['id'] for x in bad_entries], node_color='r', node_size=100,
-                               alpha=0.8)
+                               alpha=0.8, with_labels=True)
+        nx.draw_networkx_labels(G, pos)
         nx.draw_networkx_edges(G, pos, alpha=0.5)
         plt.xlim((-1.1, 1.1))
         plt.ylim((-1.1, 1.1))
@@ -58,6 +59,7 @@ def get_data(path_to_file):
 
 
 def get_end(all_data):
+    return all_data['metadata']['iterations']
     try:
         all_points = [sum([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
                       range(all_data['metadata']['iterations'])]
@@ -178,7 +180,8 @@ if __name__ == '__main__':
                 'allv': lambda x: make_all_graphs(x, True),
                 'vid': make_peer_graph
             }[cmd](path)
-            plt.show()
+            if cmd != 'vid':
+                plt.show()
         except KeyError:
             print("valid commands are 'pop', 'happy', 'util', 'vid', 'allv', and 'all'")
     except:
