@@ -54,9 +54,9 @@ class Model:
             do_assertions(all_agents)
             # Find new peers
             print("--before--")
-            [x.before_reset() for x in all_agents]
+            [x.before_reset() for x in random_iteration(all_agents)]
             print("--reset--")
-            [x.reset(c) for x in all_agents]
+            [x.reset(c) for x in random_iteration(all_agents)]
             print("--after--")
-            [x.after_reset(c) for x in all_agents]
+            [x.after_reset(c) for x in random_iteration(all_agents)]
             do_assertions(all_agents)

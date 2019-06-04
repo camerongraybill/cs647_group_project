@@ -16,6 +16,9 @@ def make_peer_graph(path_to_input):
     G = nx.Graph()
     target_clients = sorted(list(set(x['id'] for x in data['data'])))
     all_peers = set(chain.from_iterable(x['peers'] for x in data['data'] if x['id'] in target_clients))
+    original_baddies = {
+        x['id'] for x in data['data'] if x['free_rider'] and x['iteration'] == 0
+    }
     all_clients = all_peers | set(target_clients)
     G.add_nodes_from(all_clients)
     pos = nx.circular_layout(all_clients)
@@ -34,15 +37,18 @@ def make_peer_graph(path_to_input):
 
         G.add_edges_from(edges())
         nx.draw_networkx_nodes(G, pos, nodelist=[x['id'] for x in good_entries], node_color='g', node_size=100,
-                               alpha=0.8, with_labels=True)
-        nx.draw_networkx_nodes(G, pos, nodelist=[x['id'] for x in bad_entries], node_color='r', node_size=100,
-                               alpha=0.8, with_labels=True)
+                               alpha=0.8, with_labels=True, label="Good Citizens")
+        nx.draw_networkx_nodes(G, pos, nodelist=[x['id'] for x in bad_entries if x['id'] in original_baddies], node_color='r', node_size=100,
+                               alpha=0.8, with_labels=True, label="Free Riders")
+        nx.draw_networkx_nodes(G, pos, nodelist=[x['id'] for x in bad_entries if x['id'] not in original_baddies], node_color='y', node_size=100,
+                               alpha=0.8, with_labels=True, label="Defectors")
         nx.draw_networkx_labels(G, pos)
         nx.draw_networkx_edges(G, pos, alpha=0.5)
-        plt.xlim((-1.1, 1.1))
+        plt.xlim((-1.75, 1.1))
         plt.ylim((-1.1, 1.1))
         plt.axis("off")
         plt.title(f"{data['metadata']['strategy']} Iteration {iteration}")
+        plt.legend(loc='upper left')
         plt.savefig('./img.png', format='png')
         img = cv2.imread('./img.png')
         vid.write(img)
