@@ -29,6 +29,7 @@ def make_a_graph(path_to_folder):
     data = parse_data_folder(path_to_folder)
     print(data)
 
+
 if __name__ == '__main__':
     # try:
     path = argv[2]
