@@ -10,7 +10,7 @@ import numpy as np
 unique_val = count(0)
 
 
-def make_peer_graph(path_to_input):
+def make_peer_graph(path_to_input, iterations=None):
     vid = cv2.VideoWriter(f'./test.avi', 0, 2, (640, 480))
     data = get_data(path_to_input)
     G = nx.Graph()
@@ -23,7 +23,14 @@ def make_peer_graph(path_to_input):
     G.add_nodes_from(all_clients)
     pos = nx.circular_layout(all_clients)
 
-    for iteration in range(get_end(data)):
+    if iterations == "end":
+        end = get_end(data)
+    elif iterations == "all":
+        end = int(data['metadata']['iterations'])
+    else:
+        end = int(iterations)
+
+    for iteration in range(end):
         entries = [x for x in data['data'] if
                    x['iteration'] == iteration and (x['id'] in all_peers or x['id'] in target_clients)]
         good_entries = [x for x in entries if not x['free_rider']]
@@ -65,7 +72,6 @@ def get_data(path_to_file):
 
 
 def get_end(all_data):
-    return all_data['metadata']['iterations']
     try:
         all_points = [sum([a['amount_acquired'] for a in all_data['data'] if a['iteration'] == x] or [0]) for x in
                       range(all_data['metadata']['iterations'])]
@@ -143,7 +149,7 @@ def make_utility_graphs(path_to_file):
 
     def utility(entry):
         return (entry['amount_acquired'] / all_data['metadata']['max_down']) - (
-            (.25 * entry['willing_to_give'] / all_data['metadata']['max_up']) if not entry['free_rider'] else 0)
+            (.25 * (entry['willing_to_give'] - entry['amount_remaining']) / all_data['metadata']['max_up']) if not entry['free_rider'] else 0)
 
     def add_plot(dataset, color, label, order):
         plt.plot([np.mean([utility(a) for a in dataset if a['iteration'] == x] or [0]) for x in range(num_iterations)],
@@ -174,21 +180,24 @@ def make_all_graphs(path_to_file, vid=False):
 
 
 if __name__ == '__main__':
+   # try:
+    path = argv[2]
+    cmd = argv[1]
+    additional = None
+    if len(argv) == 4:
+        additional = argv[3]
     try:
-        path = argv[2]
-        cmd = argv[1]
-        try:
-            {
-                'pop': make_population_graphs,
-                'happy': make_happiness_graphs,
-                'util': make_utility_graphs,
-                'all': make_all_graphs,
-                'allv': lambda x: make_all_graphs(x, True),
-                'vid': make_peer_graph
-            }[cmd](path)
-            if cmd != 'vid':
-                plt.show()
-        except KeyError:
-            print("valid commands are 'pop', 'happy', 'util', 'vid', 'allv', and 'all'")
-    except:
-        print(f"usage: {argv[0]} pop|happy|util|all|vid|allv path/to/json/file")
+        {
+            'pop': make_population_graphs,
+            'happy': make_happiness_graphs,
+            'util': make_utility_graphs,
+            'all': make_all_graphs,
+            'allv': lambda x: make_all_graphs(x, True),
+            'vid': lambda x: make_peer_graph(x, iterations=additional)
+        }[cmd](path)
+        if cmd != 'vid':
+            plt.show()
+    except KeyError:
+        print("valid commands are 'pop', 'happy', 'util', 'vid', 'allv', and 'all'")
+    #except Exception as e:
+    #    print(f"usage: {argv[0]} pop|happy|util|all|vid|allv path/to/json/file")
